@@ -187,6 +187,25 @@ While functionally identical, the C++ version has these implementation differenc
 
 All algorithmic logic, reward calculations, and hyperparameters are **exactly the same**.
 
+## Isaac Sim Integration (Optional)
+
+For automated episode resets using Isaac Sim, see:
+- **[ISAAC_SIM_FIX_README.md](../ISAAC_SIM_FIX_README.md)** - Complete fix for ROS2 integration
+- **[ISAAC_ROS2_SETUP.md](../ISAAC_ROS2_SETUP.md)** - Quick setup guide
+
+To enable Isaac Sim resets:
+```bash
+# Terminal 1: Start Isaac Sim with ROS2
+cd ~/PegasusSimulator_51/examples/RL_test/ACRL-RL
+./start_isaac_with_ros2.sh
+
+# Terminal 2: Run training with Isaac Sim reset flag
+cd RL_with_cpp
+./run_training.sh --isaac-reset
+```
+
+The training code will automatically use `/isaac_sim/reset_request` and `/isaac_sim/reset_done` topics when available.
+
 ## Troubleshooting
 
 ### LibTorch Not Found

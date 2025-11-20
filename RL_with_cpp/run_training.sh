@@ -59,6 +59,23 @@ if [ -f "$SCRIPT_DIR/setup_env.sh" ]; then
     source "$SCRIPT_DIR/setup_env.sh"
 fi
 
+ENABLE_ISAAC_RESET=0
+for arg in "$@"; do
+    case $arg in
+        --isaac-reset)
+            ENABLE_ISAAC_RESET=1
+            shift
+            ;;
+    esac
+done
+
+if [ "$ENABLE_ISAAC_RESET" = "1" ]; then
+    export ISAAC_SIM_RESET=1
+    echo "[RUN] Enabling Isaac Sim teleport via ISAAC_SIM_RESET=1"
+else
+    unset ISAAC_SIM_RESET 2>/dev/null || true
+fi
+
 echo "Starting C++ RL Training..."
 echo "Make sure PX4 SITL and MicroXRCEAgent are running!"
 echo ""
@@ -74,4 +91,4 @@ if ! ros2 topic list 2>/dev/null | grep -q "/fmu/vehicle_local_position/out"; th
     # Proceed anyway, trainer will wait, but this helps diagnose earlier.
 fi
 
-ros2 run rl_with_cpp train_rl
+ros2 run rl_with_cpp train_rl "$@"
