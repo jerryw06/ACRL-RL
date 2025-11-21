@@ -37,7 +37,11 @@ target_link_libraries(px4_accel_env px4_node ${TORCH_LIBRARIES})
 add_library(policy_network src/policy_network.cpp)
 target_link_libraries(policy_network ${TORCH_LIBRARIES})
 
-# Training executable
+# Multi-environment library
+add_library(px4_multi_env src/px4_multi_env.cpp)
+target_link_libraries(px4_multi_env px4_accel_env ${TORCH_LIBRARIES})
+
+# Single-drone training executable
 add_executable(train_rl src/train_rl.cpp)
 ament_target_dependencies(train_rl rclcpp px4_msgs)
 target_link_libraries(train_rl 
@@ -47,9 +51,21 @@ target_link_libraries(train_rl
   ${TORCH_LIBRARIES}
 )
 
+# Multi-drone training executable
+add_executable(train_rl_multi src/train_rl_multi.cpp)
+ament_target_dependencies(train_rl_multi rclcpp px4_msgs)
+target_link_libraries(train_rl_multi 
+  px4_node 
+  px4_accel_env 
+  px4_multi_env
+  policy_network 
+  ${TORCH_LIBRARIES}
+)
+
 # Install targets
 install(TARGETS
   train_rl
+  train_rl_multi
   DESTINATION lib/${PROJECT_NAME}
 )
 

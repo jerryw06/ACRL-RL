@@ -4,10 +4,11 @@
 
 using namespace std::chrono_literals;
 
-PX4Node::PX4Node(double hz)
-    : Node("px4_accel_env"),
+PX4Node::PX4Node(double hz, int vehicle_id)
+    : Node("px4_accel_env_" + std::to_string(vehicle_id)),
       rate_hz_(hz),
       dt_(1.0 / hz),
+      vehicle_id_(vehicle_id),  // Store vehicle ID for commands
       armed_(false),
       nav_state_(px4_msgs::msg::VehicleStatus::NAVIGATION_STATE_MAX),
       last_local_(nullptr),
@@ -17,6 +18,10 @@ PX4Node::PX4Node(double hz)
       last_attitude_time_(0.0),
       last_ang_vel_time_(0.0)
 {
+    // Construct topic prefix for this vehicle
+    // vehicle_id=0 -> "/px4_0/fmu/...", vehicle_id=1 -> "/px4_1/fmu/...", etc.
+    std::string topic_prefix = "/px4_" + std::to_string(vehicle_id) + "/fmu/";
+    
     // QoS profiles
     auto qos_pub = rclcpp::QoS(1)
         .reliability(RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT)
@@ -28,29 +33,32 @@ PX4Node::PX4Node(double hz)
         .durability(RMW_QOS_POLICY_DURABILITY_VOLATILE)
         .history(RMW_QOS_POLICY_HISTORY_KEEP_LAST);
 
-    // Publishers
+    // Publishers (with vehicle-specific namespace)
     pub_offboard_ = this->create_publisher<px4_msgs::msg::OffboardControlMode>(
-        "fmu/in/offboard_control_mode", qos_pub);
+        topic_prefix + "in/offboard_control_mode", qos_pub);
     pub_traj_ = this->create_publisher<px4_msgs::msg::TrajectorySetpoint>(
-        "fmu/in/trajectory_setpoint", qos_pub);
+        topic_prefix + "in/trajectory_setpoint", qos_pub);
     pub_cmd_ = this->create_publisher<px4_msgs::msg::VehicleCommand>(
-        "fmu/in/vehicle_command", qos_pub);
+        topic_prefix + "in/vehicle_command", qos_pub);
     pub_attitude_sp_ = this->create_publisher<px4_msgs::msg::VehicleAttitudeSetpoint>(
-        "fmu/in/vehicle_attitude_setpoint", qos_pub);
+        topic_prefix + "in/vehicle_attitude_setpoint", qos_pub);
 
-    // Subscribers
+    // Subscribers (with vehicle-specific namespace)
     sub_status_ = this->create_subscription<px4_msgs::msg::VehicleStatus>(
-        "fmu/out/vehicle_status", qos_sub,
+        topic_prefix + "out/vehicle_status", qos_sub,
         std::bind(&PX4Node::on_status, this, std::placeholders::_1));
     sub_local_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-        "fmu/out/vehicle_local_position", qos_sub,
+        topic_prefix + "out/vehicle_local_position", qos_sub,
         std::bind(&PX4Node::on_local, this, std::placeholders::_1));
     sub_attitude_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
-        "fmu/out/vehicle_attitude", qos_sub,
+        topic_prefix + "out/vehicle_attitude", qos_sub,
         std::bind(&PX4Node::on_attitude, this, std::placeholders::_1));
     sub_ang_vel_ = this->create_subscription<px4_msgs::msg::VehicleAngularVelocity>(
-        "fmu/out/vehicle_angular_velocity", qos_sub,
+        topic_prefix + "out/vehicle_angular_velocity", qos_sub,
         std::bind(&PX4Node::on_angular_velocity, this, std::placeholders::_1));
+    
+    std::cout << "[PX4Node] Initialized for vehicle_id=" << vehicle_id 
+              << " with topic prefix: " << topic_prefix << std::endl;
 }
 
 void PX4Node::on_status(const px4_msgs::msg::VehicleStatus::SharedPtr msg) {
@@ -85,7 +93,8 @@ void PX4Node::send_vehicle_cmd(uint16_t command, float p1, float p2, float p3,
     msg.param5 = p5;
     msg.param6 = p6;
     msg.param7 = p7;
-    msg.target_system = 1;
+    // PX4 system_id is vehicle_id + 1 (e.g., /px4_1/ has system_id=2)
+    msg.target_system = vehicle_id_ + 1;
     msg.target_component = 1;
     msg.source_system = 1;
     msg.source_component = 1;

@@ -17,7 +17,7 @@
 
 class PX4Node : public rclcpp::Node {
 public:
-    PX4Node(double hz);
+    PX4Node(double hz, int vehicle_id = 0);
     ~PX4Node() = default;
 
     // Publishing methods
@@ -71,6 +71,7 @@ private:
 
     double rate_hz_;
     double dt_;
+    int vehicle_id_;  // System ID for multi-drone support
 
     // Publishers
     rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr pub_offboard_;

@@ -43,7 +43,8 @@ public:
                 double takeoff_tol = 0.05,
                 int settle_steps = 20,
                 double takeoff_max_time = 8.0,
-                bool safety_verbose = true);
+                bool safety_verbose = true,
+                int vehicle_id = 0);
 
     ~PX4AccelEnv();
 
@@ -145,6 +146,7 @@ private:
 
     // State
     std::shared_ptr<PX4Node> node_;
+    int vehicle_id_;  // Vehicle ID for multi-drone support (0-4)
     std::array<float, 3> spawn_xyz_;
     bool spawn_captured_ = false;
     std::array<float, 3> episode_origin_ned_;
